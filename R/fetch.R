@@ -15,9 +15,7 @@
 #' overridden via `options(simcostar.api_url = "...")` or the
 #' `SIMCOSTA_API_URL` environment variable.
 #'
-#' Requests are rate-limited to 1 per second by default (configurable via
-#' `options(simcostar.rate_limit)`) and retried up to 3 times on transient
-#' failures.
+#' Requests are retried up to 3 times on transient failures.
 #'
 #' @param boia_id Integer buoy identifier.
 #' @param start Start of the time window. Accepts `POSIXct`, `Date`,

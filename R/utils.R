@@ -26,24 +26,20 @@
   file.path(dir, "simcosta.sqlite")
 }
 
-#' Make an API request with retry and rate limiting
+#' Make an API request with retry
 #'
-#' Requests are throttled (default 1 req/s, configurable via
-#' `options(simcostar.rate_limit)`) and retried up to 3 times on transient
-#' failures with exponential backoff.
+#' Retried up to 3 times on transient failures with exponential backoff.
 #' @param endpoint API endpoint path (e.g. `"intrans_data"`).
 #' @param ... Query parameters forwarded to [httr2::req_url_query()].
 #' @return Parsed JSON (list or data.frame).
 #' @noRd
 .simcosta_api_get <- function(endpoint, ...) {
   url <- paste0(.simcosta_base_url(), "/", endpoint)
-  rate <- getOption("simcostar.rate_limit", 1)
 
   req <- httr2::request(url) |>
     httr2::req_url_query(...) |>
     httr2::req_user_agent("simcostar R package (https://github.com/leoniedu/simcostar)") |>
-    httr2::req_retry(max_tries = 3) |>
-    httr2::req_throttle(rate = rate)
+    httr2::req_retry(max_tries = 3)
 
   resp <- httr2::req_perform(req)
   txt <- httr2::resp_body_string(resp)
