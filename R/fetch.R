@@ -27,10 +27,14 @@
 #'   `"standard"` and `"currents"`. Defaults to both.
 #' @param use_cache If `TRUE` (default), use the local SQLite cache. If `FALSE`,
 #'   always fetch from the API and do not read from or write to the cache.
+#' @param wide If `TRUE` (default), return data in wide format with friendly
+#'   column names via [simcosta_wide()]. If `FALSE`, return long format with
+#'   columns `boia_id`, `time`, `variable`, `value`.
 #' @param verbose If `TRUE` (default), print progress messages.
 #'
-#' @return A `data.frame` in long format with columns `boia_id`, `time`,
-#'   `variable`, and `value`.
+#' @return A `data.frame`. If `wide = TRUE`, one column per variable with
+#'   descriptive names and a `datetime` POSIXct column. If `wide = FALSE`,
+#'   long format with columns `boia_id`, `time`, `variable`, `value`.
 #' @export
 #' @examples
 #' \dontrun{
@@ -47,6 +51,7 @@ simcosta_fetch <- function(
   end,
   endpoint = c("standard", "currents"),
   use_cache = TRUE,
+  wide = TRUE,
   verbose = TRUE
 ) {
   boia_id <- as.integer(boia_id)
@@ -59,7 +64,9 @@ simcosta_fetch <- function(
   }
 
   if (!use_cache) {
-    return(.simcosta_fetch_nocache(boia_id, start, end, endpoint, verbose))
+    out <- .simcosta_fetch_nocache(boia_id, start, end, endpoint, verbose)
+    if (wide) out <- simcosta_wide(out)
+    return(out)
   }
 
   con <- .simcosta_db_connect()
@@ -74,7 +81,7 @@ simcosta_fetch <- function(
   }
 
   endpoint_sql <- paste0("'", endpoint, "'", collapse = ", ")
-  DBI::dbGetQuery(
+  out <- DBI::dbGetQuery(
     con,
     paste0(
       "SELECT boia_id, time, variable, value FROM observations
@@ -83,6 +90,9 @@ simcosta_fetch <- function(
     ),
     params = list(boia_id, start, end)
   )
+
+  if (wide) out <- simcosta_wide(out)
+  out
 }
 
 
@@ -415,4 +425,120 @@ simcosta_fetch <- function(
       value = double()
     )
   }
+}
+
+
+# Wide format -------------------------------------------------------------
+
+#' Variable name mapping from API names to friendly snake_case
+#' @noRd
+.simcosta_var_map <- function() {
+  c(
+    # Wave height
+    Havg             = "wave_height",
+    Hsig             = "wave_height_sig",
+    HM0              = "wave_height_m0",
+    Hmax             = "wave_height_max",
+    H10              = "wave_height_10",
+    # Wave period
+    Tavg             = "wave_period",
+    T10              = "wave_period_10",
+    Tsig             = "wave_period_sig",
+    Tp               = "wave_peak_period",
+    Tp5              = "wave_peak_period_5",
+    ZCN              = "zero_crossing_count",
+    # Wave direction
+    Avg_Wv_Dir_N     = "wave_direction",
+    Avg_Wv_Spread_N  = "wave_spread",
+    # Wind / air
+    Avg_Wnd_Dir_N    = "wind_direction",
+    Avg_Wnd_Sp       = "wind_speed",
+    Avg_Air_Tmp      = "air_temperature",
+    # Water quality
+    Avg_Sal          = "salinity",
+    Avg_W_Tmp1       = "water_temp_1",
+    Avg_W_Tmp2       = "water_temp_2",
+    Avg_Chl          = "chlorophyll",
+    Avg_DO           = "dissolved_oxygen",
+    Avg_Turb         = "turbidity",
+    Avg_CDOM         = "cdom",
+    # Currents
+    C_Avg_Spd        = "current_speed_kmh",
+    C_Avg_Dir_N      = "current_direction",
+    C_Cell_2_North_Speed = "current_cell2_north_speed",
+    tidbits_temp     = "tidbit_temperature"
+  )
+}
+
+#' Unit conversions applied after pivoting to wide format
+#' @noRd
+.simcosta_unit_conversions <- function() {
+  list(
+    # C_Avg_Spd is in mm/s; convert to km/h
+    C_Avg_Spd = function(x) x * 3.6e-3
+  )
+}
+
+#' Reshape SIMCOSTA data to wide format with friendly names
+#'
+#' Converts the long-format output of [simcosta_fetch()] to a wide
+#' data frame with one column per variable, human-readable column names,
+#' and a POSIXct `datetime` column.
+#'
+#' @param data A data frame returned by [simcosta_fetch()], with columns
+#'   `boia_id`, `time`, `variable`, `value`.
+#'
+#' @return A `data.frame` in wide format with a `datetime` column (POSIXct,
+#'   UTC) and one column per variable using descriptive snake_case names.
+#'   Variables without a known mapping keep their original API name.
+#' @export
+#' @examples
+#' \dontrun{
+#' simcosta_fetch(515, "2025-01-01", "2025-01-02") |>
+#'   simcosta_wide()
+#' }
+simcosta_wide <- function(data) {
+  if (!nrow(data)) {
+    return(data.frame(boia_id = integer(), datetime = as.POSIXct(character())))
+  }
+
+  dt <- data.table::as.data.table(data)
+
+  # Apply unit conversions before pivoting
+  conversions <- .simcosta_unit_conversions()
+  for (var in names(conversions)) {
+    dt[variable == var, value := conversions[[var]](value)]
+  }
+
+  # Pivot to wide
+  wide <- data.table::dcast(dt, boia_id + time ~ variable, value.var = "value")
+
+  # Convert time to POSIXct datetime
+  wide[, datetime := as.POSIXct(time, origin = "1970-01-01", tz = "UTC")]
+  wide[, time := NULL]
+
+  # Rename columns using mapping
+  var_map <- .simcosta_var_map()
+
+  # Handle dynamic direction_cell_N -> current_dir_cell_N
+  dir_cols <- grep("^direction_cell_", names(wide), value = TRUE)
+  for (col in dir_cols) {
+    n <- sub("^direction_cell_", "", col)
+    var_map[[col]] <- paste0("current_dir_cell_", n)
+  }
+
+  old_names <- names(wide)
+  new_names <- ifelse(
+    old_names %in% names(var_map),
+    var_map[old_names],
+    old_names
+  )
+  data.table::setnames(wide, old_names, new_names)
+
+  # Reorder: boia_id, datetime first
+  front <- c("boia_id", "datetime")
+  rest <- setdiff(names(wide), front)
+  data.table::setcolorder(wide, c(front, sort(rest)))
+
+  as.data.frame(wide)
 }

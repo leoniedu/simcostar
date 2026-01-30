@@ -58,6 +58,7 @@
     "Tavg", "T10", "Tsig", "Avg_Wv_Spread_N", "Tp", "Avg_Sal",
     "Avg_W_Tmp1", "Avg_W_Tmp2", "Avg_CDOM", "Avg_Chl", "Avg_DO",
     "Avg_Turb", "C_Avg_Dir_N", "tidbits_temp", "C_Avg_Spd",
-    "C_Cell_2_North_Speed"
+    "C_Cell_2_North_Speed",
+    "Avg_Wnd_Dir_N", "Avg_Wnd_Sp", "Avg_Air_Tmp"
   )
 }
