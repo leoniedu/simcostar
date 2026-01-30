@@ -1,0 +1,29 @@
+Package: simcostar
+Type: Package
+Title: Client for the SIMCOSTA Buoy Data API
+Version: 0.1.0
+Authors@R: person("Eduardo", "Leoni", email = "e.leoni@gmail.com",
+    role = c("aut", "cre"))
+Description: Download and cache oceanographic and meteorological buoy data
+    from the SIMCOSTA platform (<https://simcosta.furg.br>). Provides
+    incremental downloads with a local SQLite cache and coverage tracking
+    so repeated queries only fetch missing time windows.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Depends: R (>= 4.1.0)
+Imports:
+    cli,
+    DBI,
+    data.table,
+    httr2,
+    jsonlite,
+    rlang,
+    RSQLite
+Suggests:
+    testthat (>= 3.0.0),
+    withr
+Config/testthat/edition: 3
+URL: https://github.com/leoniedu/simcostar
+BugReports: https://github.com/leoniedu/simcostar/issues

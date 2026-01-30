@@ -1,0 +1,6 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^LICENSE\.md$
+^CLAUDE\.md$
+^simcosta_r_package\.md$
+^\.github$
