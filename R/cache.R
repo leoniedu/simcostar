@@ -1,10 +1,10 @@
 #' Inspect the simcostar cache
 #'
-#' Returns a summary of cached data including the number of rows per table
-#' and coverage intervals.
+#' Returns a summary of cached data including the number of rows per
+#' endpoint and coverage intervals.
 #'
 #' @return Invisibly, a list with elements `db_path`, `db_size_mb`,
-#'   `standard_rows`, `currents_rows`, and `coverage`.
+#'   `rows`, and `coverage`.
 #' @export
 #' @examples
 #' \dontrun{
@@ -21,8 +21,12 @@ simcosta_cache_info <- function() {
   con <- DBI::dbConnect(RSQLite::SQLite(), path)
   on.exit(DBI::dbDisconnect(con), add = TRUE)
 
-  std_n <- DBI::dbGetQuery(con, "SELECT COUNT(*) AS n FROM standard_data")$n
-  cur_n <- DBI::dbGetQuery(con, "SELECT COUNT(*) AS n FROM currents_data")$n
+  rows <- DBI::dbGetQuery(
+    con,
+    "SELECT endpoint, COUNT(*) AS n FROM observations GROUP BY endpoint"
+  )
+  total <- sum(rows$n)
+
   cov <- DBI::dbGetQuery(
     con,
     "SELECT * FROM coverage ORDER BY boia_id, endpoint, start_ts"
@@ -31,21 +35,27 @@ simcosta_cache_info <- function() {
   size_mb <- round(file.info(path)$size / 1024^2, 2)
 
   info <- list(
-    db_path       = path,
-    db_size_mb    = size_mb,
-    standard_rows = std_n,
-    currents_rows = cur_n,
-    coverage      = cov
+    db_path    = path,
+    db_size_mb = size_mb,
+    rows       = rows,
+    coverage   = cov
   )
 
-  cli::cli_inform(c(
+  bullets <- c(
     "simcostar cache",
     "*" = "Path: {.file {path}}",
     "*" = "Size: {size_mb} MB",
-    "*" = "Standard rows: {std_n}",
-    "*" = "Currents rows: {cur_n}",
+    "*" = "Total rows: {total}",
     "*" = "Coverage entries: {nrow(cov)}"
-  ))
+  )
+
+  for (i in seq_len(nrow(rows))) {
+    ep <- rows$endpoint[i]
+    n  <- rows$n[i]
+    bullets <- c(bullets, " " = "{ep}: {n} rows")
+  }
+
+  cli::cli_inform(bullets)
 
   invisible(info)
 }
@@ -105,36 +115,20 @@ simcosta_clear_cache <- function(boia_id = NULL, endpoint = NULL,
 
   if (!is.null(endpoint)) {
     endpoint <- match.arg(endpoint, c("standard", "currents"))
+    where_parts <- c(where_parts, "endpoint = ?")
+    params <- c(params, list(endpoint))
   }
 
-  # Clear coverage
-  cov_where <- where_parts
-  cov_params <- params
-  if (!is.null(endpoint)) {
-    cov_where <- c(cov_where, "endpoint = ?")
-    cov_params <- c(cov_params, list(endpoint))
+  where_sql <- ""
+  if (length(where_parts)) {
+    where_sql <- paste(" WHERE", paste(where_parts, collapse = " AND "))
   }
 
-  cov_sql <- "DELETE FROM coverage"
-  if (length(cov_where)) {
-    cov_sql <- paste(cov_sql, "WHERE", paste(cov_where, collapse = " AND "))
-  }
-  DBI::dbExecute(con, cov_sql, params = cov_params)
-
-  # Clear data tables
-  tables <- if (is.null(endpoint)) {
-    c("standard_data", "currents_data")
-  } else {
-    paste0(endpoint, "_data")
-  }
-
-  for (tbl in tables) {
-    sql <- paste("DELETE FROM", tbl)
-    if (length(where_parts)) {
-      sql <- paste(sql, "WHERE", paste(where_parts, collapse = " AND "))
-    }
-    DBI::dbExecute(con, sql, params = params)
-  }
+  # Same WHERE clause works for both tables (both have boia_id + endpoint)
+  DBI::dbExecute(con, paste0("DELETE FROM observations", where_sql),
+                 params = params)
+  DBI::dbExecute(con, paste0("DELETE FROM coverage", where_sql),
+                 params = params)
 
   cli::cli_inform("Cache cleared.")
   invisible(TRUE)

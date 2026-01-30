@@ -13,23 +13,13 @@
 #' @noRd
 .simcosta_db_init <- function(con) {
   DBI::dbExecute(con, "
-    CREATE TABLE IF NOT EXISTS standard_data (
+    CREATE TABLE IF NOT EXISTS observations (
       boia_id   INTEGER,
       time      INTEGER,
+      endpoint  TEXT,
       variable  TEXT,
       value     REAL,
-      PRIMARY KEY (boia_id, time, variable)
-    )
-  ")
-
-  DBI::dbExecute(con, "
-    CREATE TABLE IF NOT EXISTS currents_data (
-      boia_id   INTEGER,
-      time      INTEGER,
-      depth     REAL,
-      speed     REAL,
-      direction REAL,
-      PRIMARY KEY (boia_id, time, depth)
+      PRIMARY KEY (boia_id, time, endpoint, variable)
     )
   ")
 
