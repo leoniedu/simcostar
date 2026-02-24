@@ -1,4 +1,4 @@
-#' Inspect the simcostar cache
+#' Inspect the rsimcosta cache
 #'
 #' Returns a summary of cached data including the number of rows per
 #' endpoint and coverage intervals.
@@ -42,7 +42,7 @@ simcosta_cache_info <- function() {
   )
 
   bullets <- c(
-    "simcostar cache",
+    "rsimcosta cache",
     "*" = "Path: {.file {path}}",
     "*" = "Size: {size_mb} MB",
     "*" = "Total rows: {total}",
@@ -61,7 +61,7 @@ simcosta_cache_info <- function() {
 }
 
 
-#' Clear the simcostar cache
+#' Clear the rsimcosta cache
 #'
 #' Deletes cached data. By default removes all data; optionally filter by
 #' buoy ID or endpoint.

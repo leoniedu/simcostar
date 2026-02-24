@@ -1,4 +1,4 @@
-# simcostar
+# rsimcosta
 
 R client for the [SIMCOSTA](https://simcosta.furg.br) buoy data platform.
 
@@ -9,13 +9,13 @@ in SQLite so repeated queries only fetch missing time windows.
 
 ```r
 # install.packages("pak")
-pak::pak("leoniedu/simcostar")
+pak::pak("leoniedu/rsimcosta")
 ```
 
 ## Usage
 
 ```r
-library(simcostar)
+library(rsimcosta)
 
 res <- simcosta_fetch(
   boia_id = 515,
@@ -50,8 +50,8 @@ simcosta_clear_cache(everything = TRUE)
 
 | Option | Env var | Default |
 |---|---|---|
-| `simcostar.api_url` | `SIMCOSTA_API_URL` | `https://simcosta.furg.br/api` |
-| `simcostar.rate_limit` | -- | `1` (requests per second) |
+| `rsimcosta.api_url` | `SIMCOSTA_API_URL` | `https://simcosta.furg.br/api` |
+| `rsimcosta.rate_limit` | -- | `1` (requests per second) |
 
 ## License
 

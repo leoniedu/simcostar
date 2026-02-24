@@ -2,20 +2,20 @@
 
 #' Get the SIMCOSTA API base URL
 #'
-#' Configurable via `options(simcostar.api_url = "...")` or the
+#' Configurable via `options(rsimcosta.api_url = "...")` or the
 #' `SIMCOSTA_API_URL` environment variable.
 #' @noRd
 .simcosta_base_url <- function() {
   getOption(
-    "simcostar.api_url",
+    "rsimcosta.api_url",
     Sys.getenv("SIMCOSTA_API_URL", "https://simcosta.furg.br/api")
   )
 }
 
-#' Cache directory for simcostar
+#' Cache directory for rsimcosta
 #' @noRd
 .simcosta_cache_dir <- function() {
-  tools::R_user_dir("simcostar", "cache")
+  tools::R_user_dir("rsimcosta", "cache")
 }
 
 #' Path to the SQLite cache database
@@ -38,7 +38,7 @@
 
   req <- httr2::request(url) |>
     httr2::req_url_query(...) |>
-    httr2::req_user_agent("simcostar R package (https://github.com/leoniedu/simcostar)") |>
+    httr2::req_user_agent("rsimcosta R package (https://github.com/leoniedu/rsimcosta)") |>
     httr2::req_retry(max_tries = 3)
 
   resp <- httr2::req_perform(req)

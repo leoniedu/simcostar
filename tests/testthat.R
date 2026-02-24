@@ -1,4 +1,4 @@
 library(testthat)
-library(simcostar)
+library(rsimcosta)
 
-test_check("simcostar")
+test_check("rsimcosta")

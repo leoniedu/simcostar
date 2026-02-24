@@ -12,7 +12,7 @@
 #' @section API configuration:
 #'
 #' The base URL defaults to `https://simcosta.furg.br/api` and can be
-#' overridden via `options(simcostar.api_url = "...")` or the
+#' overridden via `options(rsimcosta.api_url = "...")` or the
 #' `SIMCOSTA_API_URL` environment variable.
 #'
 #' Requests are retried up to 3 times on transient failures.
